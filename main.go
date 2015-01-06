@@ -3,8 +3,6 @@ package main
 // #cgo pkg-config: x11 xext xi
 //
 // #include <stdio.h>
-// #include <stdlib.h>
-// #include <ctype.h>
 // #include <string.h>
 // #include <X11/Xlib.h>
 // #include <X11/extensions/XInput.h>
@@ -48,25 +46,7 @@ const InvalidType C.int = -1
 var cKeyPressType C.int = InvalidType
 var cKeyReleaseType C.int = InvalidType
 
-func getKeyboardId(cDisplay *C.Display) C.XID {
-	var cDevices *C.XDeviceInfo
-	var cNumDevices C.int
-	var cId C.XID = 0
-
-	cDevices = C.XListInputDevices(cDisplay, &cNumDevices)
-	devices := XDeviceInfoToSlice(cDevices, cNumDevices)
-
-	for _, device := range devices {
-		if C.strcmp(device.name, C.CString("AT Translated Set 2 keyboard")) == 0 {
-			cId = device.id
-			break
-		}
-	}
-
-	return cId
-}
-
-func findDevice(cDisplay *C.Display, cId C.XID) *C.XDeviceInfo {
+func findKeyboardDevice(cDisplay *C.Display) *C.XDeviceInfo {
 	var cDevices *C.XDeviceInfo
 	var cFound *C.XDeviceInfo
 	var cNumDevices C.int
@@ -75,7 +55,7 @@ func findDevice(cDisplay *C.Display, cId C.XID) *C.XDeviceInfo {
 	devices := XDeviceInfoToSlice(cDevices, cNumDevices)
 
 	for _, device := range devices {
-		if device.id == cId {
+		if C.strcmp(device.name, C.CString("AT Translated Set 2 keyboard")) == 0 {
 			cFound = &device
 			break
 		}
@@ -159,18 +139,14 @@ func keyEvents(cDisplay *C.Display) {
 
 func main() {
 	var cDisplay *C.Display
-	var cId C.XID
 	var cDevice *C.XDeviceInfo
 	var cNumEvents C.int
 
 	// Open X Display
 	cDisplay = C.XOpenDisplay(nil)
 
-	// Get Keyboard Id
-	cId = getKeyboardId(cDisplay)
-
 	// Get Keyboard Device
-	cDevice = findDevice(cDisplay, cId)
+	cDevice = findKeyboardDevice(cDisplay)
 
 	// Unable to find device
 	if cDevice == nil {
