@@ -1,11 +1,6 @@
-xkg
-===
+// The MIT License (MIT)
+// Copyright (c) 2015 Henrique Menezes
 
-X Keyboard Grabber
-
-Example of usage:
-
-```go
 package main
 
 import (
@@ -27,4 +22,3 @@ func main() {
 		}
 	}
 }
-```
