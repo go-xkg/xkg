@@ -1,4 +1,7 @@
-package main
+// The MIT License (MIT)
+// Copyright (c) 2015 Henrique Menezes
+
+package xkg
 
 // #cgo pkg-config: x11 xext xi
 //
@@ -31,7 +34,6 @@ package main
 import "C"
 
 import (
-	"fmt"
 	"os"
 	"reflect"
 	"unsafe"
@@ -39,20 +41,71 @@ import (
 
 // Constants
 const KeyClass = 0
-const _IOLBF = 1
 const InvalidType C.int = -1
 
 // Global Variables
 var cKeyPressType C.int = InvalidType
 var cKeyReleaseType C.int = InvalidType
 
+// StartXGrabber starts the X Keyboard Grabber
+//  keys - channel to send keycodes
+func StartXGrabber(keys chan int) {
+	var cDisplay *C.Display
+	var cDevice *C.XDeviceInfo
+	var cNumEvents C.int
+
+	// Open X Display
+	cDisplay = C.XOpenDisplay(nil)
+
+	// Get Keyboard Device
+	cDevice = findKeyboardDevice(cDisplay)
+
+	// Unable to find device
+	if cDevice == nil {
+		os.Exit(1)
+	}
+
+	// Register Events
+	cNumEvents = registerEvents(cDisplay, cDevice)
+
+	// No events registered
+	if cNumEvents == 0 {
+		os.Exit(1)
+	}
+
+	// Grab X keyboard events
+	grabXEvents(cDisplay, keys)
+}
+
+// grabXEvents captures the keyboard events of Display X
+func grabXEvents(cDisplay *C.Display, keys chan int) {
+	var cEvent C.XEvent
+	var cKey *C.XDeviceKeyEvent
+
+	for {
+		C.XNextEvent(cDisplay, &cEvent)
+		keyPressed := (C.isType(&cEvent, cKeyPressType) != 0)
+
+		if keyPressed {
+			// Convert C.XEvent into *C.XDeviceKeyEvent
+			cKey = ((*C.XDeviceKeyEvent)(unsafe.Pointer(&cEvent)))
+
+			// Send Keycode to channel
+			keys <- int(cKey.keycode)
+		} else {
+			// unknown event
+		}
+	}
+}
+
+// findKeyboardDevice return the default keyboard device (AT Translated Set 2 keyboard)
 func findKeyboardDevice(cDisplay *C.Display) *C.XDeviceInfo {
 	var cDevices *C.XDeviceInfo
 	var cFound *C.XDeviceInfo
 	var cNumDevices C.int
 
 	cDevices = C.XListInputDevices(cDisplay, &cNumDevices)
-	devices := XDeviceInfoToSlice(cDevices, cNumDevices)
+	devices := toXDeviceInfoSlice(cDevices, cNumDevices)
 
 	for _, device := range devices {
 		if C.strcmp(device.name, C.CString("AT Translated Set 2 keyboard")) == 0 {
@@ -64,6 +117,7 @@ func findKeyboardDevice(cDisplay *C.Display) *C.XDeviceInfo {
 	return cFound
 }
 
+// registerEvents register KeyPress and KeyRelease event classes into keyboard device
 func registerEvents(cDisplay *C.Display, cDeviceInfo *C.XDeviceInfo) C.int {
 	var cNumEvents C.int
 	var cEventList [2]C.XEventClass
@@ -83,7 +137,7 @@ func registerEvents(cDisplay *C.Display, cDeviceInfo *C.XDeviceInfo) C.int {
 	}
 
 	if cDevice.num_classes > 0 {
-		classes = XInputClassInfoToSlice(cDevice.classes, cDevice.num_classes)
+		classes = toXInputClassInfoSlice(cDevice.classes, cDevice.num_classes)
 
 		for _, class := range classes {
 			switch class.input_class {
@@ -109,64 +163,10 @@ func registerEvents(cDisplay *C.Display, cDeviceInfo *C.XDeviceInfo) C.int {
 	return cNumEvents
 }
 
-func keyEvents(cDisplay *C.Display) {
-	var cEvent C.XEvent
-	var cKey *C.XDeviceKeyEvent
-
-	C.setvbuf(C.stdout, nil, _IOLBF, 0)
-
-	for {
-		C.XNextEvent(cDisplay, &cEvent)
-
-		keyPressed := (C.isType(&cEvent, cKeyPressType) != 0)
-		keyReleased := (C.isType(&cEvent, cKeyReleaseType) != 0)
-
-		if keyPressed || keyReleased {
-			// Convert C.XEvent into *C.XDeviceKeyEvent
-			cKey = ((*C.XDeviceKeyEvent)(unsafe.Pointer(&cEvent)))
-
-			fmt.Print("press=", keyPressed, "  release=", keyReleased, "  keyCode=", cKey.keycode)
-
-			if keyStr, exist := KeyMap[int(cKey.keycode)]; exist {
-				fmt.Println("  keyStr=", keyStr)
-			}
-
-		} else {
-			// unknown event
-		}
-	}
-}
-
-func main() {
-	var cDisplay *C.Display
-	var cDevice *C.XDeviceInfo
-	var cNumEvents C.int
-
-	// Open X Display
-	cDisplay = C.XOpenDisplay(nil)
-
-	// Get Keyboard Device
-	cDevice = findKeyboardDevice(cDisplay)
-
-	// Unable to find device
-	if cDevice == nil {
-		os.Exit(1)
-	}
-
-	// Register Events
-	cNumEvents = registerEvents(cDisplay, cDevice)
-
-	// No events registered
-	if cNumEvents == 0 {
-		os.Exit(1)
-	}
-
-	keyEvents(cDisplay)
-}
-
-// Convert C arrays into Go slices
-// Ref: https://code.google.com/p/go-wiki/wiki/cgo
-func XDeviceInfoToSlice(array *C.XDeviceInfo, length C.int) []C.XDeviceInfo {
+// toXDeviceInfoSlice converts *C.XDeviceInfo into []C.XDeviceInfo
+func toXDeviceInfoSlice(array *C.XDeviceInfo, length C.int) []C.XDeviceInfo {
+	// Convert C arrays into Go slices
+	// Ref: https://code.google.com/p/go-wiki/wiki/cgo
 	hdr := reflect.SliceHeader{
 		Data: uintptr(unsafe.Pointer(array)),
 		Len:  int(length),
@@ -176,9 +176,10 @@ func XDeviceInfoToSlice(array *C.XDeviceInfo, length C.int) []C.XDeviceInfo {
 	return *(*[]C.XDeviceInfo)(unsafe.Pointer(&hdr))
 }
 
-// Convert C arrays into Go slices
-// Ref: https://code.google.com/p/go-wiki/wiki/cgo
-func XInputClassInfoToSlice(array *C.XInputClassInfo, length C.int) []C.XInputClassInfo {
+// toXInputClassInfoSlice converts *C.XInputClassInfo into []C.XInputClassInfo
+func toXInputClassInfoSlice(array *C.XInputClassInfo, length C.int) []C.XInputClassInfo {
+	// Convert C arrays into Go slices
+	// Ref: https://code.google.com/p/go-wiki/wiki/cgo
 	hdr := reflect.SliceHeader{
 		Data: uintptr(unsafe.Pointer(array)),
 		Len:  int(length),

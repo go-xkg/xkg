@@ -1,4 +1,4 @@
-package main
+package xkg
 
 var KeyMap map[int]string = map[int]string{
 	// Modifier keys
