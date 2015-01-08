@@ -1,12 +1,9 @@
-// The MIT License (MIT)
-// Copyright (c) 2015 Henrique Menezes
-
 package main
 
 import (
 	"fmt"
 
-	"github.com/henriquemenezes/xkg"
+	"gopkg.in/xkg.v0"
 )
 
 func main() {

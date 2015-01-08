@@ -1,6 +1,3 @@
-// The MIT License (MIT)
-// Copyright (c) 2015 Henrique Menezes
-
 package xkg
 
 // #cgo pkg-config: x11 xext xi
