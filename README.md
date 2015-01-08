@@ -1,9 +1,13 @@
-xkg
-===
+xkg - X Keyboard Grabber
+========================
 
-X Keyboard Grabber
+[![GoDoc](https://godoc.org/github.com/henriquemenezes/xkg?status.png)](https://godoc.org/github.com/henriquemenezes/xkg)
 
-Example of usage:
+## Installation
+
+    go get github.com/henriquemenezes/xkg
+
+## Usage example:
 
 ```go
 package main
@@ -28,3 +32,7 @@ func main() {
 	}
 }
 ```
+
+## License
+
+The license of the project is [The MIT License (MIT)](https://github.com/henriquemenezes/xkg/blob/master/LICENSE).
