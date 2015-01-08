@@ -1,11 +1,11 @@
 xkg - X Keyboard Grabber
 ========================
 
-[![GoDoc](https://godoc.org/github.com/henriquemenezes/xkg?status.png)](https://godoc.org/github.com/henriquemenezes/xkg)
+[![GoDoc](https://godoc.org/github.com/go-xkg/xkg?status.png)](https://godoc.org/github.com/go-xkg/xkg)
 
 ## Installation
 
-    go get github.com/henriquemenezes/xkg
+    go get gopkg.in/xkg.v0
 
 ## Usage example:
 
@@ -14,8 +14,7 @@ package main
 
 import (
 	"fmt"
-
-	"github.com/henriquemenezes/xkg"
+	"gopkg.in/xkg.v0"
 )
 
 func main() {
